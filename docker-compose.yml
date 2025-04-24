@@ -1,0 +1,16 @@
+services:
+  urls:
+    platform: linux/amd64
+    build: .
+    ports:
+      - "8888:8888"
+    environment:
+      - FLASK_DEBUG=${FLASK_DEBUG:-True}
+      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/urls_web}
+    command: ${RUN_COMMAND:-python /app/urls_web/app.py}
+  mongo:
+    image: "mongo"
+    ports:
+      - "27017:27017"
+    profiles:
+      - develop
