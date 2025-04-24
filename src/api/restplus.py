@@ -3,7 +3,7 @@ import jwt
 from jwt import PyJWKClient
 from flask import request
 from flask_restx import Api
-from url_app import settings
+from src import settings
 from functools import wraps
 
 log = logging.getLogger(__name__)

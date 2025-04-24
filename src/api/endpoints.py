@@ -7,7 +7,7 @@ from .serializers import new_link_request, update_link_request, link_object, cli
 from .parsers import search_parser, get_parser, click_parser
 from bson.objectid import ObjectId
 from datetime import datetime
-from url_app.api import operations as ops
+from src.api import operations as ops
 
 log = logging.getLogger(__name__)
 ns = rest_api.namespace('Links', description='URL shortening operations')
@@ -41,7 +41,7 @@ class LinkRoot(Resource):
         """
 
         try:
-            return ops.create_link(api.payload), 201
+            return ops.create_link(rest_api.payload), 201
 
         except Exception as e:
             abort(500, str(e))
@@ -78,7 +78,7 @@ class URLItem(Resource):
         """
 
         try:
-            return ops.update_link(id, api.payload), 200
+            return ops.update_link(id, rest_api.payload), 200
 
         except Exception as e:
             abort(404, str(e))

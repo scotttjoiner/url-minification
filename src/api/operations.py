@@ -8,7 +8,7 @@ from dateutil.parser import parse
 from bson.objectid import ObjectId
 from pymongo.errors import DuplicateKeyError
 
-from url_app.api import mongo
+from src.api import mongo
 from .restplus import rest_api
 from .serializers import new_link_request, update_link_request
 

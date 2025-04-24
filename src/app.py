@@ -4,9 +4,9 @@ import logging.config
 from flask import Flask, Blueprint
 from flask_cors import CORS
 from flask_pymongo import PyMongo
-from url_app import settings
-from url_app.api.endpoints import ns as urls_namespace
-from url_app.api.restplus import rest_api
+from src import settings
+from src.api.endpoints import ns as urls_namespace
+from src.api.restplus import rest_api
 #from werkzeug.middleware.proxy_fix import ProxyFix
 
 # logging
