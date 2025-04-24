@@ -2,7 +2,7 @@
 # Copyright (c) 2025 Scott Joiner
 
 from flask_restx import reqparse
-f
+
 """
 Base Parser
 """
