@@ -1,5 +1,7 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Scott Joiner
+ 
 import logging
-
 from flask import request, abort, redirect
 from flask_restx import Resource
 from .restplus import requires_auth, rest_api

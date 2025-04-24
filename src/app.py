@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Scott Joiner
+
 import os
 import logging.config
 

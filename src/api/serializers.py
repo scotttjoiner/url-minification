@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Scott Joiner
+
 from flask_restx import fields
 from .restplus import rest_api
 
