@@ -35,7 +35,7 @@ class LinkListResource(Resource):
 
 
     @requires_auth
-    @ns.doc(body=[new_link_request], parser=get_parser, validate=True)
+    @ns.expect(new_link_request, get_parser, validate=True)
     @ns.marshal_list_with(link_object, code=201, description='Link created')
     def post(self):
         """
@@ -72,7 +72,7 @@ class LinkResource(Resource):
 
     @requires_auth
     @ns.response(404, 'Linl not found.')
-    @ns.doc(body=update_link_request, parser=get_parser, validate=True)
+    @ns.expect(update_link_request, get_parser, validate=True)
     @ns.marshal_with(link_object, code=200, description='Link updated')
     def put(self, id):
         """

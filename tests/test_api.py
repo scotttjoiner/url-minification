@@ -32,8 +32,7 @@ def test_get_single_link_uses_mongo(monkeypatch, app):
     # find_one should return our fake_doc
     mock_collection.find_one_or_404.return_value = fake_doc
 
-    # 2) Patch the mongo client used by your API
-    #    Adjust the import path to wherever you reference mongo.db.urls
+    # 2) Patch the mongo client 
     monkeypatch.setattr(
         'src.api.extensions.mongo.db.urls',
         mock_collection
@@ -69,7 +68,7 @@ def test_search_links_uses_mongo(monkeypatch, app):
     mock_cursor.limit.return_value = mock_cursor
     mock_cursor.__iter__.return_value = iter(fake_list)
 
-    # 3) Patch the collection so .find() returns our fake cursor
+    # Patch the collection so .find() returns our fake cursor
     mock_collection = MagicMock()
     mock_collection.find.return_value = mock_cursor 
     monkeypatch.setattr(
