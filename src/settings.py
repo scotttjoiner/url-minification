@@ -14,7 +14,7 @@ FLASK_DEBUG = True if os.environ.get('FLASK_DEBUG') is None else os.environ['FLA
 RESTPLUS_SWAGGER_UI_DOC_EXPANSION = 'list'
 RESTPLUS_VALIDATE = True
 RESTPLUS_MASK_SWAGGER = False
-RESTPLUS_ERROR_404_HELP = False
+RESTX_ERROR_404_HELP = False
 
 # Mongo settings
 MONGO_URI = os.environ.get('MONGO_URI') or 'mongodb://0.0.0.0:27017/urls'
