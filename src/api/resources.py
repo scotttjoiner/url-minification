@@ -9,7 +9,7 @@ from .serializers import new_link_request, update_link_request, link_object, cli
 from .parsers import search_parser, get_parser, click_parser
 from bson.objectid import ObjectId
 from datetime import datetime
-from src.api import operations as ops
+from src.api import services as ops
 from .extensions import mongo, ns
 
 log = logging.getLogger(__name__)
