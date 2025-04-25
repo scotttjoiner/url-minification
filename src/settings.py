@@ -17,7 +17,7 @@ RESTPLUS_MASK_SWAGGER = False
 RESTPLUS_ERROR_404_HELP = False
 
 # Mongo settings
-MONGO_URI = os.environ.get('MONGO_URI') or 'mongodb://localhost:27017/urls_web'
+MONGO_URI = os.environ.get('MONGO_URI') or 'mongodb://0.0.0.0:27017/urls'
 
 # OAUTH settings
 IDP_URL = os.environ.get('IDP_URL')

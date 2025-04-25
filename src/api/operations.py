@@ -6,7 +6,7 @@ import hashlib
 import logging
 import requests
 
-from datetime import datetime
+from datetime import datetime, timezone
 from dateutil.parser import parse
 from bson.objectid import ObjectId
 from pymongo.errors import DuplicateKeyError
@@ -63,7 +63,7 @@ def create_link(data):
             continue
 
         # Add some data
-        now = datetime.now(datetime.timezone.utc)
+        now = datetime.now(timezone.utc)
         url['created'] = now
         url['updated'] = now
         url['expiration'] = None if not url['expiration'] else parse(url['expiration'])
@@ -183,7 +183,7 @@ def add_link_click(url, requested_link, args):
 
         click = {
             'url_id': url['_id'],
-            'clicked': datetime.utcnow(),
+            'clicked': datetime.now(timezone.utc),
             'request_link': requested_link,
             'args': args
         }
