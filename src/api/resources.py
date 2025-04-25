@@ -4,24 +4,24 @@
 import logging
 from flask import request, abort, redirect
 from flask_restx import Resource
-from .restplus import requires_auth, rest_api
+from .auth import requires_auth
 from .serializers import new_link_request, update_link_request, link_object, click_object
 from .parsers import search_parser, get_parser, click_parser
 from bson.objectid import ObjectId
 from datetime import datetime
 from src.api import operations as ops
+from .extensions import mongo, ns
 
 log = logging.getLogger(__name__)
-ns = rest_api.namespace('Links', description='URL shortening operations')
 
 @ns.route('/')
-@rest_api.response(401, 'Not Authorized.')
-@rest_api.response(500, 'Link error.')
-class LinkRoot(Resource):
+@ns.response(401, 'Not Authorized.')
+@ns.response(500, 'Link error.')
+class LinkListResource(Resource):
 
     @requires_auth
-    @rest_api.expect(search_parser, validate=True)
-    @rest_api.marshal_list_with(link_object, code=200, description='Link list')
+    @ns.expect(search_parser, validate=True)
+    @ns.marshal_list_with(link_object, code=200, description='Link list')
     def get(self):
         """
         Search
@@ -36,28 +36,28 @@ class LinkRoot(Resource):
 
     @requires_auth
     @ns.doc(body=[new_link_request], parser=get_parser, validate=True)
-    @rest_api.marshal_list_with(link_object, code=201, description='Link created')
+    @ns.marshal_list_with(link_object, code=201, description='Link created')
     def post(self):
         """
         Creates minified links for the provided urls.
         """
 
         try:
-            return ops.create_link(rest_api.payload), 201
+            return ops.create_link(ns.payload), 201
 
         except Exception as e:
             abort(500, str(e))
 
 
 @ns.route('/<string:id>')
-@rest_api.response(500, 'URL error.')
-@rest_api.response(401, 'Not Authorized.')
-class URLItem(Resource):
+@ns.response(500, 'URL error.')
+@ns.response(401, 'Not Authorized.')
+class LinkResource(Resource):
 
     @requires_auth
-    @rest_api.response(404, 'Link not found.')
-    @rest_api.marshal_with(link_object, code=200, description='Link object')
-    @rest_api.expect(get_parser, validate=True)
+    @ns.response(404, 'Link not found.')
+    @ns.marshal_with(link_object, code=200, description='Link object')
+    @ns.expect(get_parser, validate=True)
     def get(self, id):
         """
         Returns a link object given the identifier.
@@ -71,33 +71,33 @@ class URLItem(Resource):
 
 
     @requires_auth
-    @rest_api.response(404, 'Linl not found.')
+    @ns.response(404, 'Linl not found.')
     @ns.doc(body=update_link_request, parser=get_parser, validate=True)
-    @rest_api.marshal_with(link_object, code=200, description='Link updated')
+    @ns.marshal_with(link_object, code=200, description='Link updated')
     def put(self, id):
         """
         Updates a link given the identifier.
         """
 
         try:
-            return ops.update_link(id, rest_api.payload), 200
+            return ops.update_link(id, ns.payload), 200
 
         except Exception as e:
             abort(404, str(e))
 
 
     @requires_auth
-    @rest_api.response(204, 'Link deleted')
-    @rest_api.response(404, 'Link not found.')
-    @rest_api.expect(get_parser, validate=True)
+    @ns.response(204, 'Link deleted')
+    @ns.response(404, 'Link not found.')
+    @ns.expect(get_parser, validate=True)
     def delete(self, id):
         """
         Deletes a shortened link given the identifier.
         """
 
         try:
-            rest_api.mongo.db.urls.find_one_or_404({"_id": ObjectId(id)})
-            rest_api.mongo.db.urls.delete_one({"_id": ObjectId(id)})
+            mongo.db.urls.find_one_or_404({"_id": ObjectId(id)})
+            mongo.db.urls.delete_one({"_id": ObjectId(id)})
             return '', 204
 
         except Exception as e:
@@ -105,14 +105,14 @@ class URLItem(Resource):
 
 
 @ns.route('/<string:id>/clicks')
-@rest_api.response(500, 'Link error.')
-@rest_api.response(401, 'Not Authorized.')
-class ClickItem(Resource):
+@ns.response(500, 'Link error.')
+@ns.response(401, 'Not Authorized.')
+class ClickListResource(Resource):
 
     @requires_auth
-    @rest_api.response(404, 'Link not found.')
-    @rest_api.expect(click_parser, validate=True)
-    @rest_api.marshal_list_with(click_object, code=200, description='Link list')
+    @ns.response(404, 'Link not found.')
+    @ns.expect(click_parser, validate=True)
+    @ns.marshal_list_with(click_object, code=200, description='Link list')
     def get(self, id):
         """
         Returns a Link's clicks based on the search args.
@@ -127,7 +127,7 @@ class ClickItem(Resource):
 
 @ns.route('/<short_link>/', defaults={'varargs': None})
 @ns.route('/<short_link>/<path:varargs>')
-class RedirectItem(Resource):
+class RedirectResource(Resource):
 
     def redirect_short_link(short_link, varargs):
         """

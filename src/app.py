@@ -6,20 +6,15 @@ import logging.config
 
 from flask import Flask, Blueprint
 from flask_cors import CORS
-from flask_pymongo import PyMongo
+from flask_restx import Api
+
 from src import settings
-from src.api.endpoints import ns as urls_namespace
-from src.api.restplus import rest_api
+from src.api.extensions import mongo, ns as links_namespace
 #from werkzeug.middleware.proxy_fix import ProxyFix
 
 # logging
 logging.config.fileConfig( '%s/logging.conf' % os.path.dirname(os.path.abspath(__file__)))
 log = logging.getLogger(__name__)
-
-# Initialization
-app = Flask(__name__)
-
-CORS(app)
 
 def configure_app(flask_app):
     
@@ -32,25 +27,47 @@ def configure_app(flask_app):
     flask_app.config['DEBUG'] = settings.FLASK_DEBUG
     flask_app.config['FLASK_PORT'] = settings.FLASK_PORT
 
-def initialize_app(flask_app):
-    
-    configure_app(flask_app)
-    blueprint = Blueprint('api', __name__, url_prefix='/api')
-    rest_api.init_app(blueprint)
-    rest_api.add_namespace(urls_namespace)
-    flask_app.register_blueprint(blueprint)
-    rest_api.mongo = PyMongo(flask_app)
-    #app.wsgi_app = ProxyFix(app.wsgi_app)
+
+def create_app() -> Flask:
+    app = Flask(__name__)
+    CORS(app)
+    configure_app(app)
+
+    # initialize Mongo on the Flask app
+    mongo.init_app(app)
+
+    # instantiate a fresh Api *for this app*
+    api = Api(
+        version='1.0',
+        title='URL Minification API',
+        description='Operations related to URL minification',
+        doc='/'  # swagger UI at /api/doc
+    )
+
+    # wire up  default error handler
+    @api.errorhandler
+    def default_error_handler(e):
+        log.exception("An unhandled exception occurred.")
+        if not app.debug:
+            return {'message': 'An unhandled exception occurred.'}, 500
+
+    # set up the API blueprint
+    bp = Blueprint('api', __name__, url_prefix='/api')
+    api.init_app(bp)
+    api.add_namespace(links_namespace, path='/links')
+    app.register_blueprint(bp)
+
+    return app
+
+app = create_app()
 
 def main():
-    log.info('>>>>> Starting development server at http://{}/api/ <<<<<'.format(app.config['SERVER_NAME']))
-    app.run(host='0.0.0.0', port=app.config['FLASK_PORT'])
-
-# Initialization
-initialize_app(app)
+    host = '0.0.0.0'
+    port = app.config['FLASK_PORT']
+    log.info(f'Starting dev server at http://{host}:{port}/api')
+    app.run(host=host, port=port)
 
 # Command line handler
 if __name__ == "__main__":
 
-    # Let's go!
     main()

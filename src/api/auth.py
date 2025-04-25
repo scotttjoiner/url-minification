@@ -5,25 +5,10 @@ import logging
 import jwt
 from jwt import PyJWKClient
 from flask import request
-from flask_restx import Api
 from src import settings
 from functools import wraps
 
 log = logging.getLogger(__name__)
-
-rest_api = Api(
-    version='1.0',
-    title='URL Minification API',
-    description='Operations related to the use of the URL minification endpoint'
-)
-
-@rest_api.errorhandler
-def default_error_handler(e):
-    message = 'An unhandled exception occurred.'
-    log.exception(message)
-
-    if not settings.FLASK_DEBUG:
-        return {'message': message}, 500
 
 def requires_auth(f):
     @wraps(f)

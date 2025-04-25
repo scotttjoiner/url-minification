@@ -2,9 +2,9 @@
 # Copyright (c) 2025 Scott Joiner
 
 from flask_restx import fields
-from .restplus import rest_api
+from .extensions import ns
 
-new_link_request = rest_api.model('Minification Request', {
+new_link_request = ns.model('Minification Request', {
     'url': fields.String(
         required=True,
         description='The URL to be minimized. It may contain placeholders for query or REST-style parameters.',
@@ -40,7 +40,7 @@ new_link_request = rest_api.model('Minification Request', {
     )
 })
 
-update_link_request = rest_api.model('Update Link Request', {
+update_link_request = ns.model('Update Link Request', {
     'url': fields.String(
         required=False,
         description='The URL to be minimized. It may contain placeholders for query or REST-style parameters.',
@@ -71,7 +71,7 @@ update_link_request = rest_api.model('Update Link Request', {
     )
 })
 
-link_object = rest_api.model('Link Object', {
+link_object = ns.model('Link Object', {
     'id': fields.String(attribute='_id'),
     'url': fields.String,
     'short_link': fields.String,
@@ -84,7 +84,7 @@ link_object = rest_api.model('Link Object', {
     'tags': fields.List(fields.String)
 })
 
-click_object = rest_api.model('Click Object', {
+click_object = ns.model('Click Object', {
     'id': fields.String(attribute='_id' ),
     'url_id': fields.String,
     'clicked': fields.DateTime,

@@ -10,9 +10,9 @@ from datetime import datetime
 from dateutil.parser import parse
 from bson.objectid import ObjectId
 from pymongo.errors import DuplicateKeyError
+from flask_restx import marshal
 
-from src.api import mongo
-from .restplus import rest_api
+from .extensions import mongo
 from .serializers import new_link_request, update_link_request
 
 log = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ def create_link(data):
     """
 
    # Get a dictionary
-    urls = rest_api.marshal(data, new_link_request, ordered=True)
+    urls = marshal(data, new_link_request, ordered=True)
 
     for url in urls:
 
@@ -97,7 +97,7 @@ def update_link(url_id, data):
         data['expiration'] = None
 
     # Validate and sanitize the incoming data
-    validated_data = rest_api.marshal(data, update_link_request)
+    validated_data = marshal(data, update_link_request)
 
     # Prepare the update document using MongoDB update operators.
     updates = {
@@ -208,7 +208,7 @@ def get_clicks(id, args):
     max = int(args.get('max') or 20)
     page = int(args.get('page') or 0) * max
 
-    url_object = find_one(id);
+    url_object = find_one(id)
 
     # Dynamically build the query
     s = {}
