@@ -4,6 +4,7 @@
 import json
 import hashlib
 import logging
+from typing import Optional
 import requests
 
 from datetime import datetime, timezone
@@ -125,6 +126,15 @@ def update_link(url_id, data):
     # Retrieve and return the updated document, raising an error if not found.
     return mongo.db.urls.find_one_or_404({"_id": ObjectId(url_id)})
 
+def delete_link(id):
+    """
+    Deletes a link if it exists
+    """
+
+    mongo.db.urls.find_one_or_404({"_id": ObjectId(id)})
+    mongo.db.urls.delete_one({"_id": ObjectId(id)})
+
+     
 def find_one(id):
     """
     Locate a minified url in the database
@@ -141,10 +151,10 @@ def find_one(id):
     return mongo.db.urls.find_one_or_404(s)
 
 
-"""
-Search for url in the database
-"""
 def search(args):
+    """
+    Search for url in the database
+    """
 
     url = args.get('url')
     tags = args.getlist('tag')
@@ -163,10 +173,10 @@ def search(args):
     return [x for x in mongo.db.urls.find(s).skip(page).limit(max)]
 
 
-"""
-Click Tracking
-"""
 def add_link_click(url, requested_link, args):
+    """
+    Click Tracking
+    """
 
     try:
         # Updates v2
@@ -199,10 +209,11 @@ def add_link_click(url, requested_link, args):
 
         log.exception(str(ex))
 
-"""
-Click Reporting
-"""
+
 def get_clicks(id, args):
+    """
+    Click Reporting
+    """
 
     tags = args.getlist('args')
     max = int(args.get('max') or 20)
@@ -223,6 +234,9 @@ def get_clicks(id, args):
     return [x for x in mongo.db.clicks.find(s).skip(page).limit(max)]
 
 def web_hook(url, click):
+    """
+    Extremely naieve webhook
+    """
 
     try:
         data = {
@@ -237,3 +251,29 @@ def web_hook(url, click):
 
     except Exception as ex:
         log.exception(str(ex))
+
+
+
+class LinkNotFoundError(Exception):
+    pass
+
+class LinkExpiredError(Exception):
+    pass
+
+def get_redirect_target(short_link: str, request_url: str, varargs: Optional[str] = None) -> str:
+    """
+    Main Redirect Logic
+    """
+    doc = find_one(short_link)
+    if not doc:
+        raise LinkNotFoundError(f"No link for {short_link}")
+
+    exp = doc.get("expiration")
+    if exp and exp.date() < datetime.now(timezone.utc).date():
+        raise LinkExpiredError(f"Link {short_link} expired")
+
+    args = varargs.split("/") if varargs else []
+    add_link_click(doc, request_url, args)
+
+    # this will safely work even if there are no `{}` in the URL
+    return doc["url"].format(*args)

@@ -7,10 +7,8 @@ from flask_restx import Resource
 from .auth import requires_auth
 from .serializers import new_link_request, update_link_request, link_object, click_object
 from .parsers import search_parser, get_parser, click_parser
-from bson.objectid import ObjectId
-from datetime import datetime
 from src.api import services as ops
-from .extensions import mongo, ns
+from .extensions import ns
 
 log = logging.getLogger(__name__)
 
@@ -96,8 +94,7 @@ class LinkResource(Resource):
         """
 
         try:
-            mongo.db.urls.find_one_or_404({"_id": ObjectId(id)})
-            mongo.db.urls.delete_one({"_id": ObjectId(id)})
+            ops.delete_link(id)
             return '', 204
 
         except Exception as e:
@@ -131,23 +128,18 @@ class RedirectResource(Resource):
 
     def redirect_short_link(short_link, varargs):
         """
-        Main Redirect Logic
+        Main Redirect 
         """
 
-        # 1) Look up the URL doc (assume find_one returns None if missing)
-        url_doc = ops.find_one(short_link)
-        if not url_doc:
-            abort(404, "Invalid Link")
+        try:
+            target = ops.get_redirect_target(
+                short_link,
+                request.url,
+                varargs
+            )
+        except ops.LinkNotFoundError as e:
+            abort(404, str(e))
+        except ops.LinkExpiredError as e:
+            abort(410, str(e))
 
-        # 2) Expiration check (assume `expiration` is a datetime or None)
-        exp = url_doc.get('expiration')
-        if exp and exp.date() < datetime.now(datetime.timezone.utc).date():
-            abort(410, "Link Expired")
-
-        # 3) Build args list, log the click
-        args = varargs.split('/') if varargs else []
-        ops.add_link_click(url_doc, request.url, args)
-
-        # 4) Always safe to format with zero or more args
-        target = url_doc['url'].format(*args)
         return redirect(target)
