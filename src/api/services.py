@@ -29,7 +29,7 @@ def generate_short_link():
         yield hashlib.md5(id_string).hexdigest()[:i]
 
 
-def insert_unique_short_link(db, url_data):
+def insert_unique_short_link(url_data):
     """
     Atomic insert leveraging mongoDB's atomicity and unique index inforcement
     """
@@ -41,7 +41,7 @@ def insert_unique_short_link(db, url_data):
             candidate = next(generate_short_link()) 
             url_data['short_link'] = candidate
         try:
-            mongo.db.urls.urls.insert_one(url_data)
+            mongo.db.links.insert_one(url_data)
             return
         except DuplicateKeyError:
             continue
@@ -72,7 +72,7 @@ def create_link(data):
 
         # If they passed us a custom short_link, try to use it
         if url.get('short_link'):
-            if mongo.db.urls.find_one({'short_link': url['short_link']}):
+            if mongo.db.links.find_one({'short_link': url['short_link']}):
                 log.warning(f"Requested short link {url['short_link']} is not available. Defaulting to generated link")
                 # Conflict: Remove provided short_link to generate a new one.
                 url.pop('short_link', None)
@@ -122,18 +122,18 @@ def update_link(url_id, data):
         )
 
     # Perform the update
-    mongo.db.urls.update_one({"_id": ObjectId(url_id)}, updates)
+    mongo.db.links.update_one({"_id": ObjectId(url_id)}, updates)
 
     # Retrieve and return the updated document, raising an error if not found.
-    return mongo.db.urls.find_one_or_404({"_id": ObjectId(url_id)})
+    return mongo.db.links.find_one_or_404({"_id": ObjectId(url_id)})
 
 def delete_link(id):
     """
     Deletes a link if it exists
     """
 
-    mongo.db.urls.find_one_or_404({"_id": ObjectId(id)})
-    mongo.db.urls.delete_one({"_id": ObjectId(id)})
+    mongo.db.links.find_one_or_404({"_id": ObjectId(id)})
+    mongo.db.links.delete_one({"_id": ObjectId(id)})
 
      
 def find_one(id):
@@ -149,7 +149,7 @@ def find_one(id):
     else:
         s['short_link'] = id
 
-    return mongo.db.urls.find_one_or_404(s)
+    return mongo.db.links.find_one_or_404(s)
 
 
 def search(args):
@@ -171,7 +171,7 @@ def search(args):
     if url:
         s['url'] = {"$text": {'$search' :url}}
     
-    return [x for x in mongo.db.urls.find(s).skip(page).limit(max)]
+    return [x for x in mongo.db.links.find(s).skip(page).limit(max)]
 
 
 def add_link_click(url, requested_link, args):
@@ -186,7 +186,7 @@ def add_link_click(url, requested_link, args):
         }
 
         # Update
-        mongo.db.urls.update_one({"_id": url['_id']}, updates)
+        mongo.db.links.update_one({"_id": url['_id']}, updates)
 
         # No need to go farther if we're just using simple tracking
         if  url['simpleTracking']:
@@ -204,7 +204,7 @@ def add_link_click(url, requested_link, args):
 
         post_back = url['webhook']
         if post_back and post_back != 'https://test.com/webhook':
-            web_hook(url, click)
+            send_web_hook(url, click)
 
     except Exception as ex:
 
@@ -234,7 +234,7 @@ def get_clicks(id, args):
 
     return [x for x in mongo.db.clicks.find(s).skip(page).limit(max)]
 
-def web_hook(url, click):
+def send_web_hook(url, click):
     """
     Extremely naieve webhook
     """

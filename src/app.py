@@ -25,7 +25,7 @@ def configure_app(flask_app):
     flask_app.config['MONGO_URI'] = settings.MONGO_URI
     flask_app.config['FLASK_DEBUG'] = settings.FLASK_DEBUG
     flask_app.config['DEBUG'] = settings.FLASK_DEBUG
-    flask_app.config['FLASK_PORT'] = settings.FLASK_PORT
+    flask_app.config['FLASK_RUN_PORT'] = settings.FLASK_RUN_PORT
 
 
 def create_app() -> Flask:

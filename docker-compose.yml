@@ -16,7 +16,7 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
       - FLASK_DEBUG=${FLASK_DEBUG:-True}
-      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/urls_minification}
+      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/urls}
       - FLASK_RUN_PORT=8888
     ports:
       - "8888:8888"
