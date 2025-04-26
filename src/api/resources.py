@@ -33,7 +33,7 @@ class LinkListResource(Resource):
 
 
     @requires_auth
-    @ns.expect(new_link_request, get_parser, validate=True)
+    @ns.expect([new_link_request], get_parser, validate=True)
     @ns.marshal_list_with(link_object, code=201, description='Link created')
     def post(self):
         """

@@ -1,11 +1,10 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2025 Scott Joiner
 
-import json
 import hashlib
 import logging
 from typing import Optional
-import requests
+from src.celery_app import celery
 
 from datetime import datetime, timezone
 from dateutil.parser import parse
@@ -15,6 +14,7 @@ from flask_restx import marshal
 
 from .extensions import mongo
 from .serializers import new_link_request, update_link_request
+from .tasks import send_click_webhook
 
 log = logging.getLogger(__name__)
 
@@ -56,6 +56,7 @@ def create_link(data):
 
    # Get a dictionary
     urls = marshal(data, new_link_request, ordered=True)
+    #urls = [marshal(item, new_link_request, ordered=True) for item in data]
 
     for url in urls:
 
@@ -247,7 +248,8 @@ def web_hook(url, click):
             'args': click['args'],
             'tags': url['tags']
         }
-        requests.post(url['webhook'], json=json.dumps(data))
+
+        send_click_webhook.delay(url, data)
 
     except Exception as ex:
         log.exception(str(ex))

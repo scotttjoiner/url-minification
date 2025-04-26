@@ -1,16 +1,41 @@
+# docker-compose.yml
+version: "3.8"
 services:
-  urls:
-    platform: linux/amd64
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  web:
     build: .
+    #platform: linux/amd64
+    command: flask run --host=0.0.0.0
+    environment:
+      - FLASK_APP=src.app:create_app
+      - FLASK_ENV=development
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - FLASK_DEBUG=${FLASK_DEBUG:-True}
+      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/urls_minification}
+      - FLASK_RUN_PORT=8888
     ports:
       - "8888:8888"
+    depends_on:
+      - redis
+      - mongo
+
+  worker:
+    build: .
+    command: celery -A src.celery_app.celery worker --loglevel=info
     environment:
-      - FLASK_DEBUG=${FLASK_DEBUG:-True}
-      - MONGO_URI=${MONGO_URI:-mongodb://mongo:27017/urls_web}
-    command: ${RUN_COMMAND:-python /app/urls_web/app.py}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    depends_on:
+      - redis
+      - web
+
   mongo:
     image: "mongo"
     ports:
       - "27017:27017"
-    profiles:
-      - develop
+    
