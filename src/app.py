@@ -63,7 +63,7 @@ app = create_app()
 
 def main():
     host = '0.0.0.0'
-    port = app.config['FLASK_PORT']
+    port = app.config['FLASK_RUN_PORT']
     log.info(f'Starting dev server at http://{host}:{port}/api')
     app.run(host=host, port=port)
 
