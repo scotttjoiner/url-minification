@@ -9,7 +9,7 @@ A simple URL minification (shortening) service built with Flask‑RESTX, MongoDB
 - **Link expiration** handling (returns 410 if expired)
 - **Click logging** via asynchronous Celery tasks with retry/backoff
 - **JWT Bearer token authentication** against an external JWKS endpoint
-- **Swagger UI** documentation at `/api/docs`
+- **Swagger UI** documentation at `/api/`
 
 ## Tech Stack
 
@@ -66,7 +66,7 @@ CELERY_RESULT_BACKEND=redis://localhost:6379/1
    ```bash
    celery -A src.celery_app.celery worker --loglevel=info
    ```
-5. Visit the Swagger UI at [http://localhost:\${FLASK\_PORT}/api/docs](http://localhost:\${FLASK_PORT}/api/docs)
+5. Visit the Swagger UI at [http://localhost:\${FLASK\_PORT}/api/](http://localhost:\${FLASK_PORT}/api/)
 
 #### Testing Webhooks Locally
 
@@ -150,11 +150,9 @@ curl -i http://localhost:8888/abc123/
 The primary short code field must have a **unique index** in MongoDB to ensure fast lookups and enforce uniqueness. For example:
 
 ```mongo
-// Create a unique index on the short code field
-db.urls.createIndex({ short_url: 1 }, { unique: true })
+// Create a unique index on the short link field
+db.urls.createIndex({ short_link: 1 }, { unique: true })
 ```mongo
-// Create (or update) a unique index on the renamed short code field
-db.urls.createIndex({ new_short_field: 1 }, { unique: true })
 ```
 
 ## License
