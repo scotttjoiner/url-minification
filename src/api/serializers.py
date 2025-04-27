@@ -5,7 +5,7 @@ from flask_restx import fields
 from .extensions import ns
 
 new_link_request = ns.model('Minification Request', {
-    'url': fields.String(
+    'redirect_url': fields.String(
         required=True,
         description='The URL to be minimized. It may contain placeholders for query or REST-style parameters.',
         example='https://test.com?param1={0}&param2={1}'
@@ -21,12 +21,7 @@ new_link_request = ns.model('Minification Request', {
         description='Date (in UTC) after which minified URL will stop working. Empty string for no expiration',
         nullable=True
     ),
-    'simpleTracking': fields.Boolean(
-        required=False,
-        default=True,
-        description='Click tracking records last access only'
-    ),
-    'clickHook': fields.String(
+    'web_hook': fields.String(
         required=False,
         description='A URL to recieve click notifications via POST',
         example='https://test.com/clickhook'
@@ -41,7 +36,7 @@ new_link_request = ns.model('Minification Request', {
 })
 
 update_link_request = ns.model('Update Link Request', {
-    'url': fields.String(
+    'redirect_url': fields.String(
         required=False,
         description='The URL to be minimized. It may contain placeholders for query or REST-style parameters.',
         example='https://test.com?param1={0}&param2={1}'
@@ -52,12 +47,7 @@ update_link_request = ns.model('Update Link Request', {
         description='Date (in UTC) after which minified URL will stop working. Empty string for no expiration',
         nullable=True
     ),
-    'simpleTracking': fields.Boolean(
-        required=False,
-        default=True,
-        description='Click tracking records last access only'
-    ),
-    'clickHook': fields.String(
+    'web_hook': fields.String(
         required=False,
         description='A URL to recieve click notifications via POST',
         example='https://test.com/clickhook'
@@ -71,23 +61,34 @@ update_link_request = ns.model('Update Link Request', {
     )
 })
 
-link_object = ns.model('Link Object', {
-    'id': fields.String(attribute='_id'),
-    'url': fields.String,
-    'short_link': fields.String,
-    'created': fields.DateTime,
-    'updated': fields.DateTime,
-    'expiration': fields.DateTime,
-    'clicked': fields.DateTime,
-    'simpleTracking': fields.Boolean,
-    'clickHook': fields.String,
-    'tags': fields.List(fields.String)
+_link_hateoas = ns.model('LinkHateoas', {
+    'self':   fields.String(description='This resource’s URL'),
+    'clicks': fields.String(description='URL to fetch click list')
 })
 
-click_object = ns.model('Click Object', {
-    'id': fields.String(attribute='_id' ),
-    'url_id': fields.String,
-    'clicked': fields.DateTime,
-    'request_url': fields.String,
-    'args': fields.List(fields.String)
+link_object = ns.model('Link', {
+    'id':           fields.String(attribute='_id'),
+    'short_link':   fields.String(),
+    'redirect_url': fields.String(),
+    'web_hook': fields.String,
+    'click_count':  fields.Integer(),
+    'last_clicked': fields.DateTime(),
+    'created':      fields.DateTime(),
+    'updated':      fields.DateTime(),
+    'expiration':   fields.DateTime(),
+    #'active':       fields.Boolean(),
+    'owner':        fields.String(description='ID of the user who created this link'),
+    'tags':         fields.List(fields.String()),
+    '_links':       fields.Nested(_link_hateoas, attribute='_links')
+})
+
+click_object = ns.model('Click', {
+    'id':          fields.String(attribute='_id'),
+    'url_id':      fields.String(),
+    'clicked':     fields.DateTime(),
+    'request_url': fields.String(),
+    'args':        fields.List(fields.String()),
+    'ip_address':  fields.String(),
+    'user_agent':  fields.String(),
+    'referrer':    fields.String(),
 })

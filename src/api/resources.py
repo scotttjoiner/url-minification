@@ -8,10 +8,10 @@ from .auth import requires_auth
 from .serializers import new_link_request, update_link_request, link_object, click_object
 from .parsers import search_parser, get_parser, click_parser
 from src.api import services as ops
-from .extensions import ns
+from .extensions import ns, attach_hateoas
 
-log = logging.getLogger(__name__)
-
+log = logging.getLogger(__name__)   
+    
 @ns.route('/')
 @ns.response(401, 'Not Authorized.')
 @ns.response(500, 'Link error.')
@@ -33,7 +33,8 @@ class LinkListResource(Resource):
 
 
     @requires_auth
-    @ns.expect([new_link_request], get_parser, validate=True)
+    @attach_hateoas
+    @ns.expect(get_parser, [new_link_request], validate=True)
     @ns.marshal_list_with(link_object, code=201, description='Link created')
     def post(self):
         """
@@ -47,12 +48,13 @@ class LinkListResource(Resource):
             abort(500, str(e))
 
 
-@ns.route('/<string:id>')
-@ns.response(500, 'URL error.')
+@ns.route('/<string:id>', endpoint='links_item')
+@ns.response(500, 'Link error.')
 @ns.response(401, 'Not Authorized.')
 class LinkResource(Resource):
 
     @requires_auth
+    @attach_hateoas
     @ns.response(404, 'Link not found.')
     @ns.marshal_with(link_object, code=200, description='Link object')
     @ns.expect(get_parser, validate=True)
@@ -69,7 +71,8 @@ class LinkResource(Resource):
 
 
     @requires_auth
-    @ns.response(404, 'Linl not found.')
+    @attach_hateoas
+    @ns.response(404, 'Link not found.')
     @ns.expect(update_link_request, get_parser, validate=True)
     @ns.marshal_with(link_object, code=200, description='Link updated')
     def put(self, id):
@@ -101,7 +104,7 @@ class LinkResource(Resource):
             abort(404, str(e))
 
 
-@ns.route('/<string:id>/clicks')
+@ns.route('/<string:id>/clicks', endpoint='link_clicks')
 @ns.response(500, 'Link error.')
 @ns.response(401, 'Not Authorized.')
 class ClickListResource(Resource):

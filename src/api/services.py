@@ -11,8 +11,9 @@ from dateutil.parser import parse
 from bson.objectid import ObjectId
 from pymongo.errors import DuplicateKeyError
 from flask_restx import marshal
+from flask import request
 
-from .extensions import mongo
+from .extensions import mongo, LinkNotFoundError, LinkExpiredError
 from .serializers import new_link_request, update_link_request
 from .tasks import send_click_webhook
 
@@ -55,35 +56,36 @@ def create_link(data):
     """
 
    # Get a dictionary
-    urls = marshal(data, new_link_request, ordered=True)
-    #urls = [marshal(item, new_link_request, ordered=True) for item in data]
-
-    for url in urls:
+    links = marshal(data, new_link_request, ordered=True)
+    
+    for link in links:
 
         # If they haven't provied a url, just move on
-        if not url.get('url'):
+        if not link.get('redirect_url'):
             continue
 
         # Add some data
         now = datetime.now(timezone.utc)
-        url['created'] = now
-        url['updated'] = now
-        url['expiration'] = None if not url['expiration'] else parse(url['expiration'])
+        link['created'] = now
+        link['updated'] = now
+        link['expiration'] = None if not link['expiration'] else parse(link['expiration'])
+        link['owner'] =  request.decoded_token.get('sub')
+        link['click_count'] = 0
 
         # If they passed us a custom short_link, try to use it
-        if url.get('short_link'):
-            if mongo.db.links.find_one({'short_link': url['short_link']}):
-                log.warning(f"Requested short link {url['short_link']} is not available. Defaulting to generated link")
+        if link.get('short_link'):
+            if mongo.db.links.find_one({'short_link': link['short_link']}):
+                log.warning(f"Requested short link {link['short_link']} is not available. Defaulting to generated link")
                 # Conflict: Remove provided short_link to generate a new one.
-                url.pop('short_link', None)
+                link.pop('short_link', None)
             
         # Can this be feactored to insert_many?
         try:
-            insert_unique_short_link(url)
+            insert_unique_short_link(link)
         except Exception as ex:
             log.error(str(ex))
 
-    return urls
+    return links
 
 
 def update_link(url_id, data):
@@ -108,7 +110,7 @@ def update_link(url_id, data):
     }
 
     # List of fields to update directly
-    fields = ['url', 'simpleTracking', 'webhook', 'tags']
+    fields = ['url', 'expiration', 'web_hook', 'tags']
 
     for field in fields:
         if field in validated_data:
@@ -174,43 +176,6 @@ def search(args):
     return [x for x in mongo.db.links.find(s).skip(page).limit(max)]
 
 
-def add_link_click(url, requested_link, args):
-    """
-    Click Tracking
-    """
-
-    try:
-        # Updates v2
-        updates = {
-            '$currentDate': {'clicked': True }
-        }
-
-        # Update
-        mongo.db.links.update_one({"_id": url['_id']}, updates)
-
-        # No need to go farther if we're just using simple tracking
-        if  url['simpleTracking']:
-            return
-
-        click = {
-            'url_id': url['_id'],
-            'clicked': datetime.now(timezone.utc),
-            'request_link': requested_link,
-            'args': args
-        }
-
-        # Insert
-        mongo.db.clicks.insert_one(click)
-
-        post_back = url['webhook']
-        if post_back and post_back != 'https://test.com/webhook':
-            send_web_hook(url, click)
-
-    except Exception as ex:
-
-        log.exception(str(ex))
-
-
 def get_clicks(id, args):
     """
     Click Reporting
@@ -234,48 +199,55 @@ def get_clicks(id, args):
 
     return [x for x in mongo.db.clicks.find(s).skip(page).limit(max)]
 
-def send_web_hook(url, click):
+def add_link_click(link, requested_link, args):
     """
-    Extremely naieve webhook
+    Click Tracking:
+    1) Increment click_count & set last_clicked on the link doc
+    2) Record a full click entry (with IP, UA, Referer)
+    3) Fire off the webhook asynchronously
     """
-
     try:
-        data = {
-            'url_id': str(url['_id']),
-            'short_link': url['short_link'],
-            'clicked': str(click['clicked']),
-            'request_link': click['request_link'],
-            'args': click['args'],
-            'tags': url['tags']
+        # 1) Update link document: bump count & set last_clicked
+        updates = {
+            '$currentDate': {'last_clicked': True},
+            '$inc':         {'click_count': 1},
         }
+        mongo.db.links.update_one({'_id': link['_id']}, updates)
 
-        send_click_webhook.delay(url, data)
+        # 2) Collect request context
+        click = {
+            'url_id':       link['_id'],
+            'clicked':      datetime.now(timezone.utc),
+            'request_url':  requested_link,
+            'args':         args,
+            'ip_address':   request.remote_addr,
+            'user_agent':   request.headers.get('User-Agent'),
+            'referrer':     request.headers.get('Referer'),
+        }
+              
+        # 3) Fire webhook task if configured
+        webhook_url = link.get('web_hook')
+        if webhook_url and webhook_url != 'https://test.com/webhook':
+            send_click_webhook.delay(webhook_url, click)
 
     except Exception as ex:
-        log.exception(str(ex))
+        log.exception("Error logging click: %s", ex)
 
-
-
-class LinkNotFoundError(Exception):
-    pass
-
-class LinkExpiredError(Exception):
-    pass
 
 def get_redirect_target(short_link: str, request_url: str, varargs: Optional[str] = None) -> str:
     """
     Main Redirect Logic
     """
-    doc = find_one(short_link)
-    if not doc:
+    link = find_one(short_link)
+    if not link:
         raise LinkNotFoundError(f"No link for {short_link}")
 
-    exp = doc.get("expiration")
+    exp = link.get("expiration")
     if exp and exp.date() < datetime.now(timezone.utc).date():
         raise LinkExpiredError(f"Link {short_link} expired")
 
     args = varargs.split("/") if varargs else []
-    add_link_click(doc, request_url, args)
+    add_link_click(link, request_url, args)
 
     # this will safely work even if there are no `{}` in the URL
-    return doc["url"].format(*args)
+    return link["redirect_url"].format(*args)

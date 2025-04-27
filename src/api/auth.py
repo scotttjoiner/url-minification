@@ -16,6 +16,7 @@ def requires_auth(f):
 
         # Local debugging. You should NOT have this set in production!
         if settings.FLASK_DEBUG:
+            request.decoded_token = {'sub': 'DEBUG'}
             return f(*args, **kwargs)
 
         auth_header = request.headers.get('Authorization', '')
@@ -41,8 +42,8 @@ def requires_auth(f):
                 algorithms = settings.IDP_ALG,
                 audience = settings.IDP_AUDIENCE_AUDIENCE
             )
-
-            log.debug('User token for request: {request.path}\n{decoded}')
+            
+            log.debug(f'User token for request: {request.path}\n{decoded}')
 
         except Exception as e:
             

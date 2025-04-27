@@ -68,6 +68,30 @@ CELERY_RESULT_BACKEND=redis://localhost:6379/1
    ```
 5. Visit the Swagger UI at [http://localhost:\${FLASK\_PORT}/api/docs](http://localhost:\${FLASK_PORT}/api/docs)
 
+#### Testing Webhooks Locally
+
+To test webhook endpoints locally without an external server, you can run a simple Python HTTP listener that prints received POST payloads. For example:
+
+```bash
+cat << 'EOF' > webhook_listener.py
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+class Handler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        length = int(self.headers['Content-Length'])
+        data = self.rfile.read(length)
+        print("Webhook payload:", data)
+        self.send_response(200)
+        self.end_headers()
+
+HTTPServer(('0.0.0.0', 9000), Handler).serve_forever()
+EOF
+
+python webhook_listener.py
+```
+
+By default this listens on port 9000; point your webhook URL to `http://localhost:9000/` to view incoming payloads.
+
 ### Docker Compose
 
 Bring up the entire stack (Flask, Redis, Celery worker):
@@ -119,6 +143,18 @@ curl http://localhost:8888/api/links/abc123 -H "Authorization: Bearer $TOKEN"
 
 # Redirect
 curl -i http://localhost:8888/abc123/
+```
+
+## Database Indexes
+
+The primary short code field must have a **unique index** in MongoDB to ensure fast lookups and enforce uniqueness. For example:
+
+```mongo
+// Create a unique index on the short code field
+db.urls.createIndex({ short_url: 1 }, { unique: true })
+```mongo
+// Create (or update) a unique index on the renamed short code field
+db.urls.createIndex({ new_short_field: 1 }, { unique: true })
 ```
 
 ## License
